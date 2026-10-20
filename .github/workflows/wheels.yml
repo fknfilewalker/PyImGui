@@ -1,0 +1,76 @@
+# Builds the wheels and the sdist, and uploads them to PyPI when a GitHub release is
+# published. Its tag has to be the version in pyproject.toml, with or without a
+# leading "v". Run it by hand (Actions > Wheels > Run workflow) to build and test
+# the wheels without uploading them.
+#
+# The upload uses PyPI's trusted publishing, which the PyPI project has to be set
+# up for: https://docs.pypi.org/trusted-publishers/ (workflow wheels.yml,
+# environment pypi).
+name: Wheels
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  wheels:
+    name: Wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The runners' own architectures: x86-64 and ARM64 for Linux and Windows,
+        # ARM64 for macOS. The wheels need macOS 26 (see pyproject.toml), which no
+        # Intel runner has to test them on.
+        os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest, windows-11-arm, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+      # The options are in pyproject.toml ([tool.cibuildwheel])
+      - uses: pypa/cibuildwheel@v4.2.1
+        env:
+          # The tests import pysdl3, which downloads SDL3 through GitHub's API
+          SDL_GITHUB_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  sdist:
+    name: Source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check that the release tag is the version
+        if: github.event_name == 'release'
+        run: |
+          version=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+          if [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
+            echo "::error::The release tag $GITHUB_REF_NAME is not the version in pyproject.toml, $version"
+            exit 1
+          fi
+      - run: pipx run build --sdist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  publish:
+    name: Upload to PyPI
+    if: github.event_name == 'release'
+    needs: [wheels, sdist]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/PyImGui
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1

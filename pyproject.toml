@@ -1,0 +1,64 @@
+[build-system]
+requires = ["scikit-build-core>=0.11", "nanobind>=3.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "PyImGui"
+version = "0.1.0"
+description = "Python bindings for Dear ImGui, its SDL3, SDL_GPU, OpenGL 3, Vulkan, Direct3D 12 and Metal backends, ImPlot and ImGuizmo"
+readme = "README.md"
+# The bindings are MIT. The wheels also contain Dear ImGui, ImPlot, ImGuizmo (MIT)
+# and nanobind (BSD-3-Clause), whose notices are in THIRD_PARTY_LICENSES.txt.
+license = "MIT AND BSD-3-Clause"
+license-files = ["LICENSE", "THIRD_PARTY_LICENSES.txt"]
+requires-python = ">=3.12"
+authors = [{ name = "Lukas Lipp", email = "lukas.lipp@cg.tuwien.ac.at" }]
+keywords = ["imgui", "implot", "imguizmo", "sdl3", "sdl_gpu", "opengl", "vulkan", "direct3d12", "metal", "gui", "plot", "gizmo", "bindings"]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/fknfilewalker/PyImGui"
+Source = "https://github.com/fknfilewalker/PyImGui"
+Issues = "https://github.com/fknfilewalker/PyImGui/issues"
+
+[project.optional-dependencies]
+# The SDL3 library of pysdl3 is the one that the backends call (see src/imgui/__init__.py)
+sdl3 = ["pysdl3"]
+# The Metal backends (macOS) and app_metal4 take PyObjC's Metal objects
+metal = ["pysdl3", "pyobjc-framework-Metal; sys_platform == 'darwin'"]
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+wheel.packages = ["src/imgui"]
+# The wheel is abi3 (STABLE_ABI in CMakeLists.txt): one for every Python release
+# from 3.12 on
+wheel.py-api = "cp312"
+# Keep the build directory, so that rebuilding after a change is incremental
+build-dir = "build/{wheel_tag}"
+
+# The release wheels, built by .github/workflows/wheels.yml
+[tool.cibuildwheel]
+# pysdl3 ships SDL3 for 64-bit x86 and ARM, and for glibc only. Free-threaded Python
+# is left out, as the module does not declare that it supports it.
+archs = ["auto64"]
+skip = ["cp3??t-*", "*-musllinux_*"]
+test-extras = ["sdl3"]
+test-command = 'python -c "import imgui; from imgui import implot; imgui.create_context(); implot.create_context(); print(imgui.get_version())"'
+
+[tool.cibuildwheel.linux]
+# pysdl3's SDL3 needs glibc 2.34
+manylinux-x86_64-image = "manylinux_2_34"
+manylinux-aarch64-image = "manylinux_2_34"
+# `import sdl3` downloads SDL3 through GitHub's API, whose rate limit for anonymous
+# requests CI runners exceed, and loads SDL3_ttf, which links FreeType
+environment-pass = ["SDL_GITHUB_TOKEN"]
+before-test = "dnf install -y freetype"
+
+[tool.cibuildwheel.macos.environment]
+# pysdl3's SDL3 needs macOS 26, and so does the Metal 4 backend
+MACOSX_DEPLOYMENT_TARGET = "26.0"
+
+[tool.cibuildwheel.windows]
+# delvewheel would bundle SDL3.dll, and the backends would call that SDL3 instead
+# of pysdl3's (see CMakeLists.txt)
+repair-wheel-command = ""
