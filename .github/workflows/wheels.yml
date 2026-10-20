@@ -1,7 +1,11 @@
-# Builds the wheels and the sdist, and uploads them to PyPI when a GitHub release is
-# published. Its tag has to be the version in pyproject.toml, with or without a
-# leading "v". Run it by hand (Actions > Wheels > Run workflow) to build and test
-# the wheels without uploading them.
+# Builds the wheels and the sdist, and uploads them to PyPI when a tag "v<version>"
+# is pushed, whose version has to be the one in pyproject.toml:
+#
+#     git tag v0.1.1 && git push origin v0.1.1
+#
+# (A GitHub release made in the browser pushes its new tag too.) Run it by hand
+# (Actions > Wheels > Run workflow) to build and test the wheels without uploading
+# them.
 #
 # The upload uses PyPI's trusted publishing, which the PyPI project has to be set
 # up for: https://docs.pypi.org/trusted-publishers/ (workflow wheels.yml,
@@ -10,8 +14,8 @@ name: Wheels
 
 on:
   workflow_dispatch:
-  release:
-    types: [published]
+  push:
+    tags: ["v*"]
 
 permissions:
   contents: read
@@ -44,12 +48,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Check that the release tag is the version
-        if: github.event_name == 'release'
+      - name: Check that the tag is the version
+        if: github.event_name == 'push'
         run: |
           version=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
-          if [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
-            echo "::error::The release tag $GITHUB_REF_NAME is not the version in pyproject.toml, $version"
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::The tag $GITHUB_REF_NAME is not v + the version in pyproject.toml, $version"
             exit 1
           fi
       - run: pipx run build --sdist
@@ -60,7 +64,7 @@ jobs:
 
   publish:
     name: Upload to PyPI
-    if: github.event_name == 'release'
+    if: github.event_name == 'push'
     needs: [wheels, sdist]
     runs-on: ubuntu-latest
     environment:

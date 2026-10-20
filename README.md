@@ -265,8 +265,8 @@ app.run(gui, window_size=(1280, 720))
   builds the single extension `imgui._imgui`, which holds them, the backends and all the bindings. They have to live in one extension because Dear
   ImGui keeps its state in globals.
 - `.github/workflows/wheels.yml` builds the wheels with cibuildwheel (options in `pyproject.toml`),
-  and uploads them to PyPI when a GitHub release is published. Bump `version` in `pyproject.toml`
-  first: the release tag has to match it (`v0.2.0` for `0.2.0`).
+  and uploads them to PyPI when a version tag is pushed. Bump `version` in `pyproject.toml`
+  first: the tag has to match it (`git tag v0.2.0 && git push origin v0.2.0` for `0.2.0`).
 - `generate.py` holds the litgen options, and writes the code between the litgen markers of
   `src/bindings/*.cpp` and `src/imgui/*.pyi`. The code outside those markers is written by hand:
   the module definition, the Metal backends' bindings (`imgui_impl_metal_bindings.mm`, whose
