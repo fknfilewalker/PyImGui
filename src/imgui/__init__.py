@@ -20,22 +20,11 @@ except ImportError as e:
 ctypes.CDLL(sdl3.SDL_GET_BINARY(sdl3.SDL_BINARY)._name, mode=ctypes.RTLD_GLOBAL)
 
 from ._imgui import *  # noqa: E402, F403
-from ._imgui import imguizmo, impl_opengl3, impl_sdl3, impl_sdlgpu3, impl_vulkan, implot  # noqa: E402
+# The submodules are compiled into _imgui; implot.py etc. register them as modules
+# of their own, so that `import imgui.implot` works
+from . import imguizmo, impl_opengl3, impl_sdl3, impl_sdlgpu3, impl_vulkan, implot  # noqa: E402
 
-# Make the submodules importable as modules of their own: `from imgui import implot`
-# works as it is, `import imgui.implot` needs these entries
-sys.modules[f"{__name__}.impl_sdl3"] = impl_sdl3
-sys.modules[f"{__name__}.impl_sdlgpu3"] = impl_sdlgpu3
-sys.modules[f"{__name__}.impl_opengl3"] = impl_opengl3
-sys.modules[f"{__name__}.impl_vulkan"] = impl_vulkan
-sys.modules[f"{__name__}.implot"] = implot
-sys.modules[f"{__name__}.imguizmo"] = imguizmo
 if sys.platform == "win32":
-    from ._imgui import impl_dx12  # noqa: E402
-
-    sys.modules[f"{__name__}.impl_dx12"] = impl_dx12
+    from . import impl_dx12  # noqa: E402
 if sys.platform == "darwin":
-    from ._imgui import impl_metal, impl_metal4  # noqa: E402
-
-    sys.modules[f"{__name__}.impl_metal"] = impl_metal
-    sys.modules[f"{__name__}.impl_metal4"] = impl_metal4
+    from . import impl_metal, impl_metal4  # noqa: E402

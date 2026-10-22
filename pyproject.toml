@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "PyImGui"
-version = "0.1.0"
+version = "0.1.1"
 description = "Python bindings for Dear ImGui, its SDL3, SDL_GPU, OpenGL 3, Vulkan, Direct3D 12 and Metal backends, ImPlot and ImGuizmo"
 readme = "README.md"
 # The bindings are MIT. The wheels also contain Dear ImGui, ImPlot, ImGuizmo (MIT)
